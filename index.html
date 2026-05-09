@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memories Under The Stars - IX GIDEON</title>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; padding: 0; background: #0b0d17; color: white; font-family: 'Montserrat', sans-serif; overflow-x: hidden; }
+
+        /* --- SAMPUL UTAMA --- */
+        .hero-cover {
+            height: 100vh; width: 100%; position: relative; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; text-align: center;
+            background: linear-gradient(rgba(11, 13, 23, 0.4), rgba(11, 13, 23, 0.8)), url('sampul.jpeg'); 
+            background-size: cover; background-position: center; background-attachment: fixed;
+        }
+
+        .hero-title {
+            font-family: 'Dancing Script', cursive; font-size: 6rem; margin: 0;
+            background: linear-gradient(to bottom, #fff, #ffb7c5);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 15px rgba(255,255,255,0.4)); z-index: 2;
+        }
+
+        /* --- GALERI --- */
+        .gallery-section { padding: 60px 20px; background: radial-gradient(circle at top, #1e2761 0%, #0b0d17 100%); position: relative; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px);
+            border-radius: 15px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease; cursor: pointer;
+        }
+
+        .card:hover { transform: translateY(-10px); border-color: #ffb7c5; }
+        .card img { width: 100%; height: 300px; object-fit: cover; display: block; }
+
+        /* --- MODAL / OVERLAY FOTO MEMBESAR --- */
+        .lightbox {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.9); display: none;
+            justify-content: center; align-items: center; z-index: 9999;
+            cursor: zoom-out;
+        }
+
+        .lightbox img {
+            max-width: 90%; max-height: 80%;
+            border-radius: 10px; box-shadow: 0 0 20px rgba(255, 183, 197, 0.5);
+            transform: scale(0.8); transition: transform 0.3s ease;
+        }
+
+        .lightbox.active { display: flex; }
+        .lightbox.active img { transform: scale(1); }
+
+        .close-btn {
+            position: absolute; top: 20px; right: 30px;
+            font-size: 40px; color: white; cursor: pointer; font-weight: bold;
+        }
+
+        footer { text-align: center; padding: 80px 20px; opacity: 0.6; background: #0b0d17; }
+        #star-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+
+        @media (max-width: 768px) {
+            .hero-title { font-size: 3.5rem; }
+            .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+            .card img { height: 200px; }
+        }
+    </style>
+</head>
+<body>
+
+<audio id="bgMusic" loop>
+    <source src="musik.mp3" type="audio/mpeg">
+</audio>
+
+<!-- Overlay untuk melihat foto besar -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <span class="close-btn">&times;</span>
+    <img id="lightbox-img" src="" alt="Zoomed Photo">
+</div>
+
+<div class="hero-cover">
+    <div id="star-container"></div>
+    <h1 class="hero-title">IX_GIDEON</h1>
+    <p class="hero-subtitle">Memories</p>
+    <p class="hero-tagline">"Tekan Layar Kamu Agar Audio Terputar✨"</p>
+    <div class="scroll-down" style="position: absolute; bottom: 30px; animation: bounce 2s infinite; opacity: 0.7;">↓ Scroll Down</div>
+</div>
+
+<div class="gallery-section">
+    <div class="container">
+        <div class="gallery-grid" id="photo-gallery"></div>
+    </div>
+</div>
+
+<footer>
+    <p>See you in the next story...<br><b>Instagram: IX_GIDEON❤️</b></p>
+</footer>
+
+<script>
+    // 1. Musik Otomatis
+    const music = document.getElementById('bgMusic');
+    function startMusic() {
+        music.play().then(() => {
+            window.removeEventListener('scroll', startMusic);
+            window.removeEventListener('click', startMusic);
+            window.removeEventListener('touchstart', startMusic);
+        }).catch(e => console.log("Menunggu interaksi..."));
+    }
+    window.addEventListener('scroll', startMusic);
+    window.addEventListener('click', startMusic);
+    window.addEventListener('touchstart', startMusic);
+
+    // 2. Galeri & Fitur Klik Foto
+    const gallery = document.getElementById('photo-gallery');
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightbox-img');
+
+    for (let i = 1; i <= 68; i++) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        
+        const img = document.createElement('img');
+        img.src = `foto${i}.jpeg`; 
+        img.alt = `Memory Gideon ${i}`;
+        img.loading = "lazy";
+        
+        // Fungsi saat kartu diklik
+        card.onclick = () => {
+            lightboxImg.src = img.src;
+            lightbox.classList.add('active');
+            document.body.style.overflow = 'hidden'; // Matikan scroll saat zoom
+        };
+        
+        card.appendChild(img);
+        gallery.appendChild(card);
+    }
+
+    function closeLightbox() {
+        lightbox.classList.remove('active');
+        document.body.style.overflow = 'auto'; // Aktifkan scroll lagi
+    }
+
+    // 3. Bintang
+    function createStars() {
+        const container = document.getElementById('star-container');
+        for (let i = 0; i < 80; i++) {
+            const star = document.createElement('div');
+            star.style.position = 'absolute';
+            star.style.width = Math.random() * 3 + 'px';
+            star.style.height = star.style.width;
+            star.style.background = 'white';
+            star.style.borderRadius = '50%';
+            star.style.top = Math.random() * 100 + '%';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.opacity = Math.random();
+            star.animate([{ opacity: 0.2 }, { opacity: 1 }, { opacity: 0.2 }], {
+                duration: 2000 + Math.random() * 3000,
+                iterations: Infinity
+            });
+            container.appendChild(star);
+        }
+    }
+    createStars();
+</script>
+
+</body>
+</html>
