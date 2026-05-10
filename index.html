@@ -37,12 +37,11 @@
         .card:hover { transform: translateY(-10px); border-color: #ffb7c5; }
         .card img { width: 100%; height: 300px; object-fit: cover; display: block; }
 
-        /* --- MODAL / OVERLAY FOTO MEMBESAR --- */
+        /* --- MODAL / LIGHTBOX --- */
         .lightbox {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.9); display: none;
             justify-content: center; align-items: center; z-index: 9999;
-            cursor: zoom-out;
         }
 
         .lightbox img {
@@ -56,8 +55,19 @@
 
         .close-btn {
             position: absolute; top: 20px; right: 30px;
-            font-size: 40px; color: white; cursor: pointer; font-weight: bold;
+            font-size: 40px; color: white; cursor: pointer; font-weight: bold; z-index: 10001;
         }
+
+        /* Navigasi Tombol Geser */
+        .nav-btn {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(255,255,255,0.15); color: white; border: none;
+            padding: 15px 20px; cursor: pointer; font-size: 30px; border-radius: 50%;
+            transition: 0.3s; z-index: 10000;
+        }
+        .nav-btn:hover { background: rgba(255, 183, 197, 0.6); }
+        .prev-btn { left: 20px; }
+        .next-btn { right: 20px; }
 
         footer { text-align: center; padding: 80px 20px; opacity: 0.6; background: #0b0d17; }
         #star-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
@@ -66,6 +76,7 @@
             .hero-title { font-size: 3.5rem; }
             .gallery-grid { grid-template-columns: repeat(2, 1fr); }
             .card img { height: 200px; }
+            .nav-btn { padding: 10px 15px; font-size: 20px; background: rgba(255,255,255,0.2); }
         }
     </style>
 </head>
@@ -75,16 +86,18 @@
     <source src="musik.mp3" type="audio/mpeg">
 </audio>
 
-<div class="lightbox" id="lightbox" onclick="closeLightbox()">
-    <span class="close-btn">&times;</span>
-    <img id="lightbox-img" src="" alt="Zoomed Photo">
+<div class="lightbox" id="lightbox">
+    <span class="close-btn" onclick="closeLightbox()">&times;</span>
+    <button class="nav-btn prev-btn" onclick="changeImage(-1)">&#10094;</button>
+    <img id="lightbox-img" src="" alt="Zoomed Photo" onclick="event.stopPropagation()">
+    <button class="nav-btn next-btn" onclick="changeImage(1)">&#10095;</button>
 </div>
 
 <div class="hero-cover">
     <div id="star-container"></div>
     <h1 class="hero-title">IX_GIDEON</h1>
     <p class="hero-subtitle">80 Memories</p>
-    <p class="hero-tagline">"Tekan Layar Kamu Agar Audio Terputar✨"</p>
+    <p class="hero-tagline">"Tekan Layar atau untuk Memutar Musik✨"</p>
     <div class="scroll-down" style="position: absolute; bottom: 30px; animation: bounce 2s infinite; opacity: 0.7;">↓ Scroll Down</div>
 </div>
 
@@ -99,25 +112,35 @@
 </footer>
 
 <script>
-    // 1. Musik Otomatis
+    // 1. Logika Audio (Memastikan audio terputar saat interaksi pertama)
     const music = document.getElementById('bgMusic');
-    function startMusic() {
-        music.play().then(() => {
-            window.removeEventListener('scroll', startMusic);
-            window.removeEventListener('click', startMusic);
-            window.removeEventListener('touchstart', startMusic);
-        }).catch(e => console.log("Menunggu interaksi..."));
-    }
-    window.addEventListener('scroll', startMusic);
-    window.addEventListener('click', startMusic);
-    window.addEventListener('touchstart', startMusic);
+    let isMusicPlaying = false;
 
-    // 2. Galeri & Fitur Klik Foto (Diperbarui menjadi 80 slot)
+    function playAudio() {
+        if (!isMusicPlaying) {
+            music.play().then(() => {
+                isMusicPlaying = true;
+                // Hapus event listener setelah musik berhasil diputar
+                ['click', 'scroll', 'touchstart', 'keydown'].forEach(evt => 
+                    window.removeEventListener(evt, playAudio)
+                );
+            }).catch(error => console.log("Menunggu interaksi pengguna..."));
+        }
+    }
+
+    // Pasang listener pada berbagai jenis interaksi
+    ['click', 'scroll', 'touchstart', 'keydown'].forEach(evt => 
+        window.addEventListener(evt, playAudio, { once: false })
+    );
+
+    // 2. Galeri & Fitur Geser Foto
     const gallery = document.getElementById('photo-gallery');
     const lightbox = document.getElementById('lightbox');
     const lightboxImg = document.getElementById('lightbox-img');
+    let currentIdx = 1;
+    const totalPhotos = 80;
 
-    for (let i = 1; i <= 80; i++) {
+    for (let i = 1; i <= totalPhotos; i++) {
         const card = document.createElement('div');
         card.className = 'card';
         
@@ -126,14 +149,20 @@
         img.alt = `Memory Gideon ${i}`;
         img.loading = "lazy";
         
-        card.onclick = () => {
-            lightboxImg.src = img.src;
-            lightbox.classList.add('active');
-            document.body.style.overflow = 'hidden';
+        card.onclick = (e) => {
+            e.stopPropagation(); // Mencegah konflik klik
+            openLightbox(i);
         };
         
         card.appendChild(img);
         gallery.appendChild(card);
+    }
+
+    function openLightbox(index) {
+        currentIdx = index;
+        lightboxImg.src = `foto${currentIdx}.jpeg`;
+        lightbox.classList.add('active');
+        document.body.style.overflow = 'hidden';
     }
 
     function closeLightbox() {
@@ -141,7 +170,27 @@
         document.body.style.overflow = 'auto';
     }
 
-    // 3. Bintang
+    function changeImage(step) {
+        currentIdx += step;
+        if (currentIdx > totalPhotos) currentIdx = 1;
+        if (currentIdx < 1) currentIdx = totalPhotos;
+        lightboxImg.src = `foto${currentIdx}.jpeg`;
+    }
+
+    // Klik luar gambar untuk tutup
+    lightbox.onclick = (e) => {
+        if (e.target === lightbox) closeLightbox();
+    };
+
+    // Navigasi Keyboard
+    document.addEventListener('keydown', (e) => {
+        if (!lightbox.classList.contains('active')) return;
+        if (e.key === "ArrowRight") changeImage(1);
+        if (e.key === "ArrowLeft") changeImage(-1);
+        if (e.key === "Escape") closeLightbox();
+    });
+
+    // 3. Animasi Bintang
     function createStars() {
         const container = document.getElementById('star-container');
         for (let i = 0; i < 80; i++) {
