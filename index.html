@@ -37,6 +37,49 @@
         .card:hover { transform: translateY(-10px); border-color: #ffb7c5; }
         .card img { width: 100%; height: 300px; object-fit: cover; display: block; }
 
+        /* --- MESSAGE SLOTS SECTION --- */
+        .message-section { padding: 40px 20px; background: #0b0d17; text-align: center; }
+        
+        /* Gaya Judul Pesan Baru */
+        .message-title {
+            font-family: 'Dancing Script', cursive;
+            font-size: 3rem;
+            margin-bottom: 30px;
+            background: linear-gradient(to right, #fff, #ffb7c5, #fff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 10px rgba(255,183,197,0.5));
+        }
+
+        .message-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+            gap: 20px; 
+            max-width: 1200px; 
+            margin: 0 auto; 
+        }
+        .message-slot {
+            background: linear-gradient(135deg, #0056b3 0%, #00aaff 100%);
+            padding: 15px;
+            border: 2px solid #3399ff;
+            transform: skewX(-15deg); 
+            transition: 0.3s;
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.3);
+        }
+        .message-slot:hover { transform: skewX(-15deg) scale(1.05); border-color: white; }
+        .message-text {
+            transform: skewX(15deg); 
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            font-size: 0.9rem;
+            line-height: 1.3;
+        }
+
         /* --- MODAL / LIGHTBOX --- */
         .lightbox {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -44,21 +87,26 @@
             justify-content: center; align-items: center; z-index: 9999;
         }
 
-        .lightbox img {
-            max-width: 90%; max-height: 80%;
-            border-radius: 10px; box-shadow: 0 0 20px rgba(255, 183, 197, 0.5);
-            transform: scale(0.8); transition: transform 0.3s ease;
+        .lightbox-container {
+            position: relative; width: 90%; height: 80%;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
         }
 
-        .lightbox.active { display: flex; }
-        .lightbox.active img { transform: scale(1); }
+        .lightbox img {
+            max-width: 100%; max-height: 100%;
+            border-radius: 10px; box-shadow: 0 0 20px rgba(255, 183, 197, 0.5);
+            transition: transform 0.3s ease;
+            cursor: zoom-in;
+        }
+
+        .lightbox img.zoomed { transform: scale(2); cursor: zoom-out; }
 
         .close-btn {
             position: absolute; top: 20px; right: 30px;
             font-size: 40px; color: white; cursor: pointer; font-weight: bold; z-index: 10001;
         }
 
-        /* Navigasi Tombol Geser */
         .nav-btn {
             position: absolute; top: 50%; transform: translateY(-50%);
             background: rgba(255,255,255,0.15); color: white; border: none;
@@ -74,9 +122,12 @@
 
         @media (max-width: 768px) {
             .hero-title { font-size: 3.5rem; }
+            .message-title { font-size: 2.2rem; }
             .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+            .message-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
             .card img { height: 200px; }
-            .nav-btn { padding: 10px 15px; font-size: 20px; background: rgba(255,255,255,0.2); }
+            .nav-btn { padding: 10px 15px; font-size: 20px; }
+            .lightbox img.zoomed { transform: scale(1.5); }
         }
     </style>
 </head>
@@ -89,16 +140,17 @@
 <div class="lightbox" id="lightbox">
     <span class="close-btn" onclick="closeLightbox()">&times;</span>
     <button class="nav-btn prev-btn" onclick="changeImage(-1)">&#10094;</button>
-    <img id="lightbox-img" src="" alt="Zoomed Photo" onclick="event.stopPropagation()">
+    <div class="lightbox-container" onclick="toggleZoom()">
+        <img id="lightbox-img" src="" alt="Zoomed Photo" onclick="event.stopPropagation()">
+    </div>
     <button class="nav-btn next-btn" onclick="changeImage(1)">&#10095;</button>
 </div>
 
 <div class="hero-cover">
     <div id="star-container"></div>
     <h1 class="hero-title">IX_GIDEON</h1>
-    <p class="hero-subtitle">80 Memories</p>
-    <p class="hero-tagline">"Tekan Layar atau untuk Memutar Musik✨"</p>
-    <div class="scroll-down" style="position: absolute; bottom: 30px; animation: bounce 2s infinite; opacity: 0.7;">↓ Scroll Down</div>
+    <p class="hero-subtitle">129 Memories</p>
+    <p class="hero-tagline">"Sentuh Layar untuk Musik & Klik Foto untuk Zoom✨"</p>
 </div>
 
 <div class="gallery-section">
@@ -107,66 +159,87 @@
     </div>
 </div>
 
+<div class="message-section">
+    <h2 class="message-title">Pesan Dari Kami</h2>
+    <div class="message-grid" id="message-container"></div>
+</div>
+
 <footer>
     <p>See you in the next story...<br><b>Instagram: IX_GIDEON❤️</b></p>
 </footer>
 
 <script>
-    // 1. Logika Audio (Memastikan audio terputar saat interaksi pertama)
+    // 1. Audio Logic
     const music = document.getElementById('bgMusic');
     let isMusicPlaying = false;
-
     function playAudio() {
         if (!isMusicPlaying) {
             music.play().then(() => {
                 isMusicPlaying = true;
-                // Hapus event listener setelah musik berhasil diputar
-                ['click', 'scroll', 'touchstart', 'keydown'].forEach(evt => 
-                    window.removeEventListener(evt, playAudio)
-                );
-            }).catch(error => console.log("Menunggu interaksi pengguna..."));
+                ['click', 'scroll', 'touchstart'].forEach(evt => window.removeEventListener(evt, playAudio));
+            }).catch(e => {});
         }
     }
+    ['click', 'scroll', 'touchstart'].forEach(evt => window.addEventListener(evt, playAudio));
 
-    // Pasang listener pada berbagai jenis interaksi
-    ['click', 'scroll', 'touchstart', 'keydown'].forEach(evt => 
-        window.addEventListener(evt, playAudio, { once: false })
-    );
-
-    // 2. Galeri & Fitur Geser Foto
+    // 2. Galeri Foto
     const gallery = document.getElementById('photo-gallery');
     const lightbox = document.getElementById('lightbox');
     const lightboxImg = document.getElementById('lightbox-img');
     let currentIdx = 1;
-    const totalPhotos = 80;
+    const totalPhotos = 129;
 
     for (let i = 1; i <= totalPhotos; i++) {
         const card = document.createElement('div');
         card.className = 'card';
-        
         const img = document.createElement('img');
-        img.src = `foto${i}.jpeg`; 
-        img.alt = `Memory Gideon ${i}`;
+        img.src = `foto${i}.jpeg`;
         img.loading = "lazy";
-        
-        card.onclick = (e) => {
-            e.stopPropagation(); // Mencegah konflik klik
-            openLightbox(i);
-        };
-        
+        card.onclick = () => openLightbox(i);
         card.appendChild(img);
         gallery.appendChild(card);
     }
 
+    const messageContainer = document.getElementById('message-container');
+    const totalSlots = 27;
+    
+    const dataPesan = [
+        "buk sintia : <br> Love you my Kiddos 🥰❤️‍🔥",
+        "Ruben : <br> aku sayang kalian❤️❤️❤️",
+        "Piang : <br> mabar epep",
+        "Evayy : <br> Sa pukul ko nanti..😒",
+        "jejescott : <br> nak ikut main roblox",
+        "Reyvan : <br> kam nanti rinduh saya pasti",
+        "cello  : <br> ayo main",
+        "Frevol : Cape-cape cari jokes, ternyata hanya sa yang lucu",
+        "Kesya : Sekolah sini kaya tombol, tertekan.",
+        "Berayen: ngantuk",
+        "Lawrence : PULSEK MABAR ROBLOXXX!",
+        "Stefan : Gass mabar🤟🏻",
+    ];
+
+    for (let i = 0; i < totalSlots; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'message-slot';
+        const text = document.createElement('div');
+        text.className = 'message-text';
+        text.innerHTML = dataPesan[i] || ""; 
+        slot.appendChild(text);
+        messageContainer.appendChild(slot);
+    }
+
+    // 4. Lightbox Functions
     function openLightbox(index) {
         currentIdx = index;
         lightboxImg.src = `foto${currentIdx}.jpeg`;
-        lightbox.classList.add('active');
+        lightboxImg.classList.remove('zoomed');
+        lightbox.style.display = 'flex';
         document.body.style.overflow = 'hidden';
     }
 
     function closeLightbox() {
-        lightbox.classList.remove('active');
+        lightbox.style.display = 'none';
+        lightboxImg.classList.remove('zoomed');
         document.body.style.overflow = 'auto';
     }
 
@@ -175,22 +248,24 @@
         if (currentIdx > totalPhotos) currentIdx = 1;
         if (currentIdx < 1) currentIdx = totalPhotos;
         lightboxImg.src = `foto${currentIdx}.jpeg`;
+        lightboxImg.classList.remove('zoomed');
     }
 
-    // Klik luar gambar untuk tutup
+    function toggleZoom() { lightboxImg.classList.toggle('zoomed'); }
+
     lightbox.onclick = (e) => {
-        if (e.target === lightbox) closeLightbox();
+        if (e.target === lightbox || e.target.className === 'lightbox-container') closeLightbox();
     };
 
-    // Navigasi Keyboard
     document.addEventListener('keydown', (e) => {
-        if (!lightbox.classList.contains('active')) return;
-        if (e.key === "ArrowRight") changeImage(1);
-        if (e.key === "ArrowLeft") changeImage(-1);
-        if (e.key === "Escape") closeLightbox();
+        if (lightbox.style.display === 'flex') {
+            if (e.key === "ArrowRight") changeImage(1);
+            if (e.key === "ArrowLeft") changeImage(-1);
+            if (e.key === "Escape") closeLightbox();
+        }
     });
 
-    // 3. Animasi Bintang
+    // 5. Bintang Bergerak
     function createStars() {
         const container = document.getElementById('star-container');
         for (let i = 0; i < 80; i++) {
